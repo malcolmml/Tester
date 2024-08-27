@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Table with Calculations</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            text-align: center;
+            padding: 5px;
+            font-size: 14px;
+        }
+        input[type="number"] {
+            width: 60px;
+            text-align: center;
+        }
+        input[type="date"] {
+            margin-left: 10px;
+        }
+        .input-row {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Dynamic Financial Calculation</h2>
+    
+    <div class="input-row">
+        <label for="datePicker">Select Date:</label>
+        <input type="date" id="datePicker" onchange="createTable()">
+    </div>
+
+    <div class="input-row">
+        <label for="inputA">Input A:</label>
+        <input type="number" id="inputA" oninput="updateTable()" placeholder="Enter value for A">
+        <label for="inputC">Input C (Current):</label>
+        <input type="number" id="inputC" oninput="updateTable()" placeholder="Enter value for C">
+        <label for="inputD">Input D (Difference):</label>
+        <input type="number" id="inputD" oninput="updateTable()" placeholder="Enter value for D">
+    </div>
+
+    <div class="input-row">
+        <span id="bankTransaction"></span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Table rows will be dynamically inserted here -->
+        </tbody>
+    </table>
+
+    <script>
+        function getCurrentDate() {
+            const today = new Date();
+            return today.toISOString().split('T')[0]; // Get date in YYYY-MM-DD format
+        }
+
+        function getDaysInMonth(year, month) {
+            return new Date(year, month, 0).getDate();
+        }
+
+        function createTable() {
+            const tableBody = document.getElementById("tableBody");
+            tableBody.innerHTML = ''; // Clear previous rows
+
+            const selectedDate = new Date(document.getElementById("datePicker").value);
+            const year = selectedDate.getFullYear();
+            const month = selectedDate.getMonth() + 1; // JavaScript months are 0-indexed
+            const totalDaysInMonth = getDaysInMonth(year, month);
+
+            for (let day = 1; day <= totalDaysInMonth; day++) {
+                const row = document.createElement("tr");
+                row.innerHTML = `<td>${day}/${month}</td><td></td>`;
+                tableBody.appendChild(row);
+            }
+
+            updateTable(); // Reflect initial inputs
+        }
+
+        function updateTable() {
+            const inputA = parseFloat(document.getElementById("inputA").value);
+            const inputC = parseFloat(document.getElementById("inputC").value);
+            const inputD = parseFloat(document.getElementById("inputD").value);
+            const tableBody = document.getElementById("tableBody");
+
+            if (isNaN(inputA) || isNaN(inputC) || isNaN(inputD)) {
+                document.getElementById("bankTransaction").textContent = '';
+                return;
+            }
+
+            // Calculate E = A - D
+            const calculatedE = inputA - inputD;
+
+            // Calculate B so the average is E + 550
+            const selectedDate = new Date(document.getElementById("datePicker").value);
+            const totalDaysInMonth = getDaysInMonth(selectedDate.getFullYear(), selectedDate.getMonth() + 1);
+            const selectedDay = selectedDate.getDate();
+
+            const targetAverage = calculatedE + 550;
+            const totalRequiredSum = targetAverage * totalDaysInMonth;
+            const remainingSumForB = totalRequiredSum - (inputA * (selectedDay - 1)); // Only up to the day before today
+
+            const calculatedB = remainingSumForB / (totalDaysInMonth - (selectedDay - 1));
+
+            // Calculate F = C - B
+            const calculatedF = inputC - calculatedB;
+
+            // Display the bank transaction message based on F
+            const bankTransaction = document.getElementById("bankTransaction");
+            if (calculatedF < 0) {
+                bankTransaction.textContent = `Withdraw ${Math.abs(calculatedF).toFixed(2)} from bank account`;
+            } else {
+                bankTransaction.textContent = `Deposit ${calculatedF.toFixed(2)} to bank account`;
+            }
+
+            // Update the table values for past days (A) and future days (calculated B)
+            for (let day = 0; day < totalDaysInMonth; day++) {
+                const valueCell = tableBody.rows[day].cells[1];
+                if (day < selectedDay - 1) {
+                    valueCell.textContent = inputA;
+                } else {
+                    valueCell.textContent = calculatedB.toFixed(2);
+                }
+            }
+        }
+
+        // Initialize with today's date when the page loads
+        window.onload = function() {
+            const datePicker = document.getElementById("datePicker");
+            datePicker.value = getCurrentDate();
+            createTable();
+        };
+    </script>
+</body>
+</html>
